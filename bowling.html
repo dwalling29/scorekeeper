@@ -92,7 +92,7 @@
 
     .details {
       display: grid;
-      grid-template-columns: 2.2fr 1.2fr .8fr .8fr;
+      grid-template-columns: 2.2fr 1fr 1fr;
       gap: 12px;
       margin: 17px 0 16px;
     }
@@ -1044,12 +1044,8 @@
           <input class="meta-input saved-meta" id="date" type="date">
         </div>
         <div>
-          <label class="meta-label" for="lane">Lane</label>
-          <input class="meta-input saved-meta" id="lane" type="text" placeholder="Lane #">
-        </div>
-        <div>
-          <label class="meta-label" for="game">Game</label>
-          <input class="meta-input saved-meta" id="game" type="text" placeholder="Game #">
+          <label class="meta-label" for="week">Week</label>
+          <input class="meta-input saved-meta" id="week" type="text" placeholder="Week #">
         </div>
       </section>
     </details>
@@ -2074,7 +2070,7 @@
       let activeRollInput = null;
 
       function mobileEntryEnabled() {
-        return mq("(max-width: 900px)");
+        return false; // use the device's full keyboard for entry
       }
 
       function configureMobileEntry() {
