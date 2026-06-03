@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="League">
+  <title>Thursday Bowling League #1</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --ink:#162431; --accent:#123b5d; --accent-soft:#e8eef5;
+      --paper:#ffffff; --bg:#eaf0f5; --line:#cdd8e3;
+      --focus:#f3c76a; --danger:#aa2834; --win:#1d7a46; --muted:#5b6b7a;
+    }
+    body {
+      margin:0; background:var(--bg); color:var(--ink);
+      font-family:Arial, Helvetica, sans-serif; line-height:1.4;
+    }
+    .page { max-width:1000px; margin:0 auto; padding:18px 16px 60px; }
+    h1 { font-size:24px; margin:0; letter-spacing:.01em; }
+    .sub { color:var(--muted); font-size:14px; margin:4px 0 14px; }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+    .tab {
+      flex:1 1 auto; min-width:120px; padding:12px 14px; border:1.5px solid var(--accent);
+      background:var(--paper); color:var(--accent); font-weight:bold; font-size:16px;
+      border-radius:10px; cursor:pointer;
+    }
+    .tab.active { background:var(--accent); color:#fff; }
+    .view { display:none; }
+    .view.active { display:block; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+    .card h2 { font-size:18px; margin:0 0 10px; color:var(--accent); }
+
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px 8px; text-align:center; border-bottom:1px solid var(--line); }
+    th { background:var(--accent); color:#fff; font-size:14px; }
+    th:first-child, td:first-child { text-align:left; }
+    tbody tr:nth-child(even) { background:var(--accent-soft); }
+    .team-name { font-weight:bold; }
+    .rank { width:34px; color:var(--muted); }
+    .wlnum { font-weight:bold; font-size:16px; }
+
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+    button.btn {
+      padding:10px 14px; border-radius:8px; border:1.5px solid var(--accent);
+      background:var(--paper); color:var(--accent); font-weight:bold; cursor:pointer; font-size:14px;
+    }
+    button.btn.solid { background:var(--accent); color:#fff; }
+    button.btn.warn { border-color:var(--danger); color:var(--danger); }
+    .status { margin-left:auto; color:var(--muted); font-size:13px; border:1px solid var(--line); border-radius:999px; padding:6px 12px; }
+
+    /* schedule */
+    .week { margin-bottom:14px; }
+    .week h3 { margin:0 0 8px; color:var(--accent); font-size:16px; border-bottom:2px solid var(--accent-soft); padding-bottom:4px; }
+    .slot-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px; }
+    .game { display:flex; align-items:center; gap:8px; margin:6px 0; }
+    .pick {
+      flex:1; padding:12px 8px; border:1.5px solid var(--line); background:var(--paper);
+      border-radius:8px; cursor:pointer; font-size:15px; font-weight:bold; color:var(--ink);
+    }
+    .pick.win { background:var(--win); border-color:var(--win); color:#fff; }
+    .pick.lose { opacity:.55; }
+    .vs { color:var(--muted); font-weight:bold; font-size:13px; }
+    .money { padding:12px; border:1.5px dashed var(--accent); border-radius:8px; text-align:center; font-weight:bold; color:var(--accent); background:var(--accent-soft); }
+
+    /* best games */
+    .wk-picker { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+    .wk-btn { padding:8px 12px; border:1.5px solid var(--accent); background:var(--paper); color:var(--accent); border-radius:8px; font-weight:bold; cursor:pointer; }
+    .wk-btn.active { background:var(--accent); color:#fff; }
+    .bg-add { display:flex; gap:8px; margin:10px 0; flex-wrap:wrap; }
+    .bg-add input { padding:10px; border:1.5px solid var(--line); border-radius:8px; font-size:15px; }
+    .bg-add input.name { flex:1; min-width:140px; }
+    .bg-add input.score { width:90px; }
+    .bg-row { display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--line); }
+    .bg-row .pos { width:26px; color:var(--muted); font-weight:bold; }
+    .bg-row .nm { flex:1; font-weight:bold; }
+    .bg-row .sc { font-weight:bold; font-size:16px; }
+    .bg-row .x { color:var(--danger); cursor:pointer; border:none; background:none; font-size:18px; }
+    .empty { color:var(--muted); font-style:italic; padding:8px 4px; }
+    input.edit-name { font:inherit; font-weight:bold; padding:6px 8px; border:1.5px solid var(--line); border-radius:6px; width:100%; }
+    .hint { color:var(--muted); font-size:13px; margin-top:6px; }
+    .footer { color:var(--muted); font-size:12px; text-align:center; margin-top:24px; }
+    @media print {
+      .tabs, .toolbar, .x, .pick, .bg-add, .wk-picker, button { display:none !important; }
+      .view { display:block !important; }
+      .card { break-inside:avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Thursday Bowling League #1</h1>
+    <p class="sub">6 teams &middot; two games each Thursday (7pm &amp; 8pm) &middot; head-to-head win/loss</p>
+
+    <div class="toolbar">
+      <button class="btn solid" id="btnExport">Export</button>
+      <button class="btn" id="btnImport">Import</button>
+      <button class="btn" id="btnPrint">Print</button>
+      <button class="btn warn" id="btnReset">Reset Season</button>
+      <span class="status" id="status">Saved</span>
+      <input type="file" id="importFile" accept="application/json" style="display:none">
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-view="standings">Standings</button>
+      <button class="tab" data-view="schedule">Schedule</button>
+      <button class="tab" data-view="best">Best Games</button>
+    </div>
+
+    <section class="view active" id="view-standings">
+      <div class="card">
+        <h2>Standings</h2>
+        <table>
+          <thead><tr><th class="rank">#</th><th>Team</th><th>W</th><th>L</th><th>Win %</th></tr></thead>
+          <tbody id="standingsBody"></tbody>
+        </table>
+        <div class="toolbar" style="margin-top:12px;">
+          <button class="btn" id="btnEditTeams">Edit Team Names</button>
+        </div>
+        <p class="hint">Standings update automatically as you set winners on the Schedule tab.</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-schedule">
+      <div class="card">
+        <h2>Schedule</h2>
+        <p class="hint">Tap the team that won each game. Tap it again to clear. Add or fix matchups anytime.</p>
+        <div id="scheduleBody"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-best">
+      <div class="card">
+        <h2>Best Game of the Week</h2>
+        <div class="wk-picker" id="wkPicker"></div>
+        <div class="bg-add">
+          <input class="name" id="bgName" type="text" placeholder="Bowler name">
+          <input class="score" id="bgScore" type="number" inputmode="numeric" placeholder="Score" min="0" max="300">
+          <button class="btn solid" id="bgAdd">Add</button>
+        </div>
+        <div id="bestList"></div>
+      </div>
+      <div class="card">
+        <h2>Season Top 5</h2>
+        <div id="seasonTop"></div>
+      </div>
+    </section>
+
+    <p class="footer">Scores are saved on this device. Use Export to back up or share.</p>
+  </div>
+
+  <script>
+  (() => {
+    const STORAGE_KEY = "thursdayBowlingLeague_v1";
+
+    const DEFAULTS = {
+      teams: [
+        {id:1, name:"Munsons"},
+        {id:2, name:"Slippery Willy's"},
+        {id:3, name:"Split On Your Face!"},
+        {id:4, name:"All 3 Fingers"},
+        {id:5, name:"Balls-N-Dolls"},
+        {id:6, name:"2 Guys-1 Lane"}
+      ],
+      games: [
+        {wk:1, slot:'7pm', a:2, b:1, w:1},
+        {wk:1, slot:'7pm', a:3, b:4, w:4},
+        {wk:1, slot:'8pm', a:3, b:6, w:3},
+        {wk:1, slot:'8pm', a:4, b:5, w:5},
+        {wk:2, slot:'7pm', a:6, b:4, w:4},
+        {wk:2, slot:'7pm', a:2, b:5, w:5},
+        {wk:2, slot:'8pm', a:2, b:3, w:3},
+        {wk:2, slot:'8pm', a:6, b:1, w:1},
+        {wk:3, slot:'7pm', a:6, b:2, w:2},
+        {wk:3, slot:'7pm', a:3, b:4, w:3},
+        {wk:3, slot:'8pm', a:5, b:3, w:3},
+        {wk:3, slot:'8pm', a:4, b:1, w:4},
+        {wk:4, slot:'7pm', a:4, b:2, w:4},
+        {wk:4, slot:'7pm', a:3, b:1, w:1},
+        {wk:4, slot:'8pm', a:2, b:1, w:1},
+        {wk:4, slot:'8pm', a:5, b:6, w:6},
+        {wk:5, slot:'7pm', a:4, b:5, w:5},
+        {wk:5, slot:'7pm', a:1, b:3, w:3},
+        {wk:5, slot:'8pm', a:2, b:4, w:2},
+        {wk:5, slot:'8pm', a:6, b:1, w:1},
+        {wk:6, slot:'7pm', a:6, b:4, w:null},
+        {wk:6, slot:'7pm', a:2, b:5, w:null},
+        {wk:6, slot:'8pm', a:1, b:5, w:null},
+        {wk:6, slot:'8pm', a:3, b:2, w:null},
+        {wk:7, slot:'7pm', a:5, b:3, w:null},
+        {wk:7, slot:'7pm', a:6, b:2, w:null},
+        {wk:7, slot:'8pm', a:4, b:1, w:null},
+        {wk:7, slot:'8pm', a:5, b:6, w:null},
+        {wk:8, slot:'7pm', a:3, b:6, w:null},
+        {wk:8, slot:'7pm', a:1, b:5, w:null},
+        {wk:8, slot:'8pm', money:true}
+      ],
+      best: {}   // { weekNumber: [ {name, score} ] }
+    };
+
+    let state = load();
+    let activeWeek = 1;
+    let editTeams = false;
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            teams: parsed.teams || clone(DEFAULTS.teams),
+            games: parsed.games || clone(DEFAULTS.games),
+            best: parsed.best || {}
+          };
+        }
+      } catch (e) {}
+      return clone(DEFAULTS);
+    }
+    function clone(x){ return JSON.parse(JSON.stringify(x)); }
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        setStatus("Saved");
+      } catch (e) { setStatus("Could not save"); }
+    }
+    function setStatus(t){ const s=document.getElementById("status"); if(s) s.textContent=t; }
+    function teamName(id){ const t=state.teams.find(t=>t.id===id); return t?t.name:("Team "+id); }
+
+    /* ---------- Standings ---------- */
+    function computeStandings() {
+      const rec = {};
+      state.teams.forEach(t => rec[t.id] = {id:t.id, name:t.name, w:0, l:0});
+      state.games.forEach(g => {
+        if (g.money || g.w == null) return;
+        if (!rec[g.a] || !rec[g.b]) return;
+        const loser = g.w === g.a ? g.b : g.a;
+        if (rec[g.w]) rec[g.w].w++;
+        if (rec[loser]) rec[loser].l++;
+      });
+      const arr = Object.values(rec);
+      arr.forEach(r => r.pct = (r.w + r.l) ? r.w/(r.w+r.l) : 0);
+      arr.sort((a,b) => b.w - a.w || b.pct - a.pct || a.name.localeCompare(b.name));
+      return arr;
+    }
+    function renderStandings() {
+      const body = document.getElementById("standingsBody");
+      const rows = computeStandings();
+      body.innerHTML = rows.map((r,i) => {
+        const pct = (r.w+r.l) ? (r.pct*100).toFixed(0)+"%" : "&ndash;";
+        const nameCell = editTeams
+          ? `<input class="edit-name" data-team="${r.id}" value="${escapeHtml(r.name)}">`
+          : `<span class="team-name">${escapeHtml(r.name)}</span>`;
+        return `<tr><td class="rank">${i+1}</td><td>${nameCell}</td>
+          <td class="wlnum">${r.w}</td><td class="wlnum">${r.l}</td><td>${pct}</td></tr>`;
+      }).join("");
+      if (editTeams) {
+        body.querySelectorAll(".edit-name").forEach(inp => {
+          inp.addEventListener("input", () => {
+            const id = Number(inp.dataset.team);
+            const t = state.teams.find(t=>t.id===id);
+            if (t) { t.name = inp.value; save(); }
+          });
+        });
+      }
+    }
+
+    /* ---------- Schedule ---------- */
+    function renderSchedule() {
+      const host = document.getElementById("scheduleBody");
+      const weeks = [...new Set(state.games.map(g=>g.wk))].sort((a,b)=>a-b);
+      host.innerHTML = weeks.map(wk => {
+        const slots = ["7pm","8pm"];
+        const slotHtml = slots.map(slot => {
+          const gs = state.games.filter(g => g.wk===wk && g.slot===slot);
+          if (!gs.length) return "";
+          const items = gs.map(g => {
+            const idx = state.games.indexOf(g);
+            if (g.money) return `<div class="money">&#128176; Money Night</div>`;
+            const aWin = g.w===g.a, bWin = g.w===g.b, decided = g.w!=null;
+            const aCls = "pick" + (aWin?" win":(decided?" lose":""));
+            const bCls = "pick" + (bWin?" win":(decided?" lose":""));
+            return `<div class="game">
+              <button class="${aCls}" data-game="${idx}" data-team="${g.a}">${escapeHtml(teamName(g.a))}</button>
+              <span class="vs">vs</span>
+              <button class="${bCls}" data-game="${idx}" data-team="${g.b}">${escapeHtml(teamName(g.b))}</button>
+            </div>`;
+          }).join("");
+          return `<div class="slot-label">${slot}</div>${items}`;
+        }).join("");
+        return `<div class="week"><h3>Week ${wk}</h3>${slotHtml}</div>`;
+      }).join("");
+
+      host.querySelectorAll(".pick").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.game);
+          const team = Number(btn.dataset.team);
+          const g = state.games[idx];
+          if (!g) return;
+          g.w = (g.w === team) ? null : team;   // toggle off if same
+          save();
+          renderSchedule();
+          renderStandings();
+        });
+      });
+    }
+
+    /* ---------- Best Games ---------- */
+    function renderWeekPicker() {
+      const host = document.getElementById("wkPicker");
+      const weeks = [...new Set(state.games.map(g=>g.wk))].sort((a,b)=>a-b);
+      host.innerHTML = weeks.map(wk =>
+        `<button class="wk-btn ${wk===activeWeek?'active':''}" data-wk="${wk}">Wk ${wk}</button>`
+      ).join("");
+      host.querySelectorAll(".wk-btn").forEach(b => {
+        b.addEventListener("click", () => { activeWeek = Number(b.dataset.wk); renderWeekPicker(); renderBestList(); });
+      });
+    }
+    function renderBestList() {
+      const host = document.getElementById("bestList");
+      const list = (state.best[activeWeek] || []).slice().sort((a,b)=>b.score-a.score);
+      if (!list.length) { host.innerHTML = `<div class="empty">No scores for Week ${activeWeek} yet.</div>`; }
+      else {
+        host.innerHTML = list.map((e,i) =>
+          `<div class="bg-row"><span class="pos">${i+1}</span>
+            <span class="nm">${escapeHtml(e.name)}</span>
+            <span class="sc">${e.score}</span>
+            <button class="x" data-wk="${activeWeek}" data-i="${i}" title="Remove">&times;</button></div>`
+        ).join("");
+        host.querySelectorAll(".x").forEach(x => {
+          x.addEventListener("click", () => {
+            const arr = (state.best[activeWeek]||[]).slice().sort((a,b)=>b.score-a.score);
+            arr.splice(Number(x.dataset.i),1);
+            state.best[activeWeek] = arr;
+            save(); renderBestList(); renderSeasonTop();
+          });
+        });
+      }
+    }
+    function renderSeasonTop() {
+      const host = document.getElementById("seasonTop");
+      const all = [];
+      Object.keys(state.best).forEach(wk => (state.best[wk]||[]).forEach(e => all.push({wk, name:e.name, score:e.score})));
+      all.sort((a,b)=>b.score-a.score);
+      const top = all.slice(0,5);
+      if (!top.length) { host.innerHTML = `<div class="empty">Add weekly scores to build the season list.</div>`; return; }
+      host.innerHTML = top.map((e,i) =>
+        `<div class="bg-row"><span class="pos">${i+1}</span>
+          <span class="nm">${escapeHtml(e.name)} <span style="color:var(--muted);font-weight:normal;">(Wk ${e.wk})</span></span>
+          <span class="sc">${e.score}</span></div>`
+      ).join("");
+    }
+    function addBest() {
+      const nameEl = document.getElementById("bgName");
+      const scoreEl = document.getElementById("bgScore");
+      const name = nameEl.value.trim();
+      const score = parseInt(scoreEl.value, 10);
+      if (!name || isNaN(score)) return;
+      if (!state.best[activeWeek]) state.best[activeWeek] = [];
+      state.best[activeWeek].push({name, score});
+      nameEl.value = ""; scoreEl.value = "";
+      save(); renderBestList(); renderSeasonTop();
+    }
+
+    /* ---------- helpers / wiring ---------- */
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    function showView(name) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view===name));
+      document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id==="view-"+name));
+    }
+    document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showView(t.dataset.view)));
+
+    document.getElementById("btnEditTeams").addEventListener("click", () => {
+      editTeams = !editTeams;
+      document.getElementById("btnEditTeams").textContent = editTeams ? "Done Editing" : "Edit Team Names";
+      renderStandings();
+      renderSchedule();
+    });
+
+    document.getElementById("bgAdd").addEventListener("click", addBest);
+    document.getElementById("bgScore").addEventListener("keydown", e => { if (e.key==="Enter") addBest(); });
+
+    document.getElementById("btnPrint").addEventListener("click", () => window.print());
+
+    document.getElementById("btnExport").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "thursday-league.json";
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+    document.getElementById("btnImport").addEventListener("click", () => document.getElementById("importFile").click());
+    document.getElementById("importFile").addEventListener("change", e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (data.teams && data.games) {
+            state = { teams:data.teams, games:data.games, best:data.best||{} };
+            save(); renderAll();
+          } else { alert("That file doesn't look like a league file."); }
+        } catch (err) { alert("Could not read that file."); }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    });
+    document.getElementById("btnReset").addEventListener("click", () => {
+      if (confirm("Reset the whole season back to the starting schedule? This clears all winners and best games on this device.")) {
+        state = clone(DEFAULTS); activeWeek = 1; save(); renderAll();
+      }
+    });
+
+    function renderAll() {
+      renderStandings();
+      renderSchedule();
+      renderWeekPicker();
+      renderBestList();
+      renderSeasonTop();
+    }
+
+    // test hook (harmless in browser)
+    window.__league = { computeStandings, get state(){return state;} };
+
+    renderAll();
+  })();
+  </script>
+</body>
+</html>
