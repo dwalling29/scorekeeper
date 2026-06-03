@@ -171,6 +171,12 @@
         <h3 style="color:var(--accent);font-size:15px;margin:16px 0 6px;">Head-to-head</h3>
         <div id="statsH2H"></div>
       </div>
+      <div class="card">
+        <h2>Bowler Scores</h2>
+        <p class="hint">Pick a bowler, then type each game's score. Totals, average, and high game add up on their own.</p>
+        <div class="wk-picker" id="bowlerPicker"></div>
+        <div id="bowlerCard"></div>
+      </div>
     </section>
 
     <p class="footer">Scores are saved on this device. Use Export to back up or share.</p>
@@ -182,12 +188,12 @@
 
     const DEFAULTS = {
       teams: [
-        {id:1, name:"Munsons"},
-        {id:2, name:"Slippery Willy's"},
-        {id:3, name:"Split On Your Face!"},
-        {id:4, name:"All 3 Fingers"},
-        {id:5, name:"Balls-N-Dolls"},
-        {id:6, name:"2 Guys-1 Lane"}
+        {id:1, name:"Munsons", bowlers:["Casey","Doug"]},
+        {id:2, name:"Slippery Willy's", bowlers:["Bill","Billy"]},
+        {id:3, name:"Split On Your Face!", bowlers:["Tim","Shannon"]},
+        {id:4, name:"All 3 Fingers", bowlers:["Mike","Josh"]},
+        {id:5, name:"Balls-N-Dolls", bowlers:["Stephanie","Alex"]},
+        {id:6, name:"2 Guys-1 Lane", bowlers:["Steve","Benny"]}
       ],
       games: [
         {wk:1, slot:'7pm', a:2, b:1, w:1},
@@ -222,7 +228,8 @@
         {wk:8, slot:'7pm', a:1, b:5, w:null},
         {wk:8, slot:'8pm', money:true}
       ],
-      best: {}   // { weekNumber: [ {name, score} ] }
+      best: {},   // { weekNumber: [ {name, score} ] }
+      scores: {}  // { "teamId-bowlerIdx": { week: [game7pm, game8pm] } }
     };
 
     let state = load();
@@ -232,16 +239,24 @@
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          return {
-            teams: parsed.teams || clone(DEFAULTS.teams),
-            games: parsed.games || clone(DEFAULTS.games),
-            best: parsed.best || {}
-          };
-        }
+        if (raw) return normalize(JSON.parse(raw));
       } catch (e) {}
       return clone(DEFAULTS);
+    }
+    function normalize(s) {
+      const out = {
+        teams: s.teams || clone(DEFAULTS.teams),
+        games: s.games || clone(DEFAULTS.games),
+        best: s.best || {},
+        scores: s.scores || {}
+      };
+      out.teams.forEach(t => {
+        if (!Array.isArray(t.bowlers) || t.bowlers.length < 2) {
+          const def = DEFAULTS.teams.find(d => d.id === t.id);
+          t.bowlers = def ? def.bowlers.slice() : ["", ""];
+        }
+      });
+      return out;
     }
     function clone(x){ return JSON.parse(JSON.stringify(x)); }
     function save() {
@@ -466,6 +481,91 @@
       } else {
         h2hHost.innerHTML = "";
       }
+      renderBowlers();
+    }
+
+    /* ---------- Bowler scores ---------- */
+    let activeBowler = null;
+
+    function renderBowlers() {
+      const team = state.teams.find(t => t.id === activeStatsTeam);
+      const picker = document.getElementById("bowlerPicker");
+      const card = document.getElementById("bowlerCard");
+      if (!team) { picker.innerHTML = ""; card.innerHTML = ""; return; }
+      if (!activeBowler || activeBowler.team !== activeStatsTeam) activeBowler = {team:activeStatsTeam, idx:0};
+      picker.innerHTML = team.bowlers.map((b,i) =>
+        `<button class="wk-btn ${i===activeBowler.idx?'active':''}" data-bidx="${i}">${escapeHtml(b || ('Bowler '+(i+1)))}</button>`
+      ).join("");
+      picker.querySelectorAll(".wk-btn").forEach(btn =>
+        btn.addEventListener("click", () => { activeBowler = {team:activeStatsTeam, idx:Number(btn.dataset.bidx)}; renderBowlers(); }));
+      renderBowlerCard();
+    }
+
+    function renderBowlerCard() {
+      const host = document.getElementById("bowlerCard");
+      const team = state.teams.find(t => t.id === activeStatsTeam);
+      if (!team) { host.innerHTML = ""; return; }
+      const idx = activeBowler.idx;
+      const key = activeStatsTeam + "-" + idx;
+      if (!state.scores[key]) state.scores[key] = {};
+      const sc = state.scores[key];
+      const weeks = [...new Set(state.games.map(g=>g.wk))].sort((a,b)=>a-b);
+      const rows = weeks.map(wk => {
+        const arr = sc[wk] || [];
+        const g1 = (arr[0]!=null) ? arr[0] : "";
+        const g2 = (arr[1]!=null) ? arr[1] : "";
+        const has = arr[0]!=null || arr[1]!=null;
+        const wt = (Number(arr[0])||0) + (Number(arr[1])||0);
+        return `<tr><td>Wk ${wk}</td>
+          <td><input class="score-in" data-wk="${wk}" data-g="0" type="number" inputmode="numeric" min="0" max="300" value="${g1}"></td>
+          <td><input class="score-in" data-wk="${wk}" data-g="1" type="number" inputmode="numeric" min="0" max="300" value="${g2}"></td>
+          <td class="wt" data-wk="${wk}">${has ? wt : ""}</td></tr>`;
+      }).join("");
+      host.innerHTML = `
+        <input class="edit-name" id="bowlerNameEdit" value="${escapeHtml(team.bowlers[idx]||'')}" style="max-width:260px;margin-bottom:10px;">
+        <div style="overflow-x:auto;">
+          <table><thead><tr><th>Week</th><th>7pm</th><th>8pm</th><th>Week Total</th></tr></thead>
+          <tbody>${rows}</tbody></table>
+        </div>
+        <div id="bowlerSummary" style="margin-top:10px;font-size:15px;"></div>`;
+
+      host.querySelectorAll(".score-in").forEach(inp => {
+        inp.addEventListener("input", () => {
+          const wk = inp.dataset.wk, g = Number(inp.dataset.g);
+          if (!state.scores[key]) state.scores[key] = {};
+          if (!state.scores[key][wk]) state.scores[key][wk] = [];
+          let v = inp.value === "" ? null : parseInt(inp.value, 10);
+          if (v != null && !isNaN(v)) v = Math.max(0, Math.min(300, v));
+          state.scores[key][wk][g] = (v==null || isNaN(v)) ? null : v;
+          const arr = state.scores[key][wk];
+          const cell = host.querySelector(`.wt[data-wk="${wk}"]`);
+          const has = arr[0]!=null || arr[1]!=null;
+          cell.textContent = has ? ((Number(arr[0])||0)+(Number(arr[1])||0)) : "";
+          updateBowlerSummary(key);
+          save();
+        });
+      });
+      const nameEdit = document.getElementById("bowlerNameEdit");
+      nameEdit.addEventListener("input", () => {
+        team.bowlers[idx] = nameEdit.value;
+        const b = document.querySelector(`#bowlerPicker .wk-btn[data-bidx="${idx}"]`);
+        if (b) b.textContent = nameEdit.value || ("Bowler "+(idx+1));
+        save();
+      });
+      updateBowlerSummary(key);
+    }
+
+    function updateBowlerSummary(key) {
+      const sc = state.scores[key] || {};
+      let games=0, pins=0, high=0;
+      Object.values(sc).forEach(arr => (arr||[]).forEach(v => {
+        if (v != null && !isNaN(v)) { games++; pins += v; if (v > high) high = v; }
+      }));
+      const el = document.getElementById("bowlerSummary");
+      if (!el) return;
+      el.innerHTML = games
+        ? `<b>Games:</b> ${games} &nbsp;&nbsp; <b>Total pins:</b> ${pins} &nbsp;&nbsp; <b>Average:</b> ${(pins/games).toFixed(1)} &nbsp;&nbsp; <b>High game:</b> ${high}`
+        : `<span class="empty">Enter game scores above to see totals and average.</span>`;
     }
 
     /* ---------- helpers / wiring ---------- */
@@ -505,7 +605,7 @@
         try {
           const data = JSON.parse(reader.result);
           if (data.teams && data.games) {
-            state = { teams:data.teams, games:data.games, best:data.best||{} };
+            state = normalize(data);
             save(); renderAll();
           } else { alert("That file doesn't look like a league file."); }
         } catch (err) { alert("Could not read that file."); }
