@@ -968,6 +968,53 @@
     @media (max-width: 900px) {
       .frame:not(.tenth) .roll:first-child { width: 62px; }
     }
+
+    /* Print: always use the compact row scorecard, even from an iPad */
+    @media print {
+      @page { size: landscape; margin: 0.35in; }
+      html, body { background: #fff !important; padding: 0 !important; }
+      .page { margin: 0 !important; padding: 0 !important; box-shadow: none !important; max-width: none !important; }
+
+      .toolbar, .hint, .save-status, .saved-games-panel, .mobile-keypad,
+      .preview-note, .score-entry-title, .footer, .game-info > summary { display: none !important; }
+
+      .bowling-mark { display: none !important; }
+      .titlebar { display: flex !important; text-align: left !important; margin-bottom: 10px !important; padding-bottom: 8px !important; }
+      .title-stack { align-items: flex-start !important; }
+      .league-logo { max-width: 340px !important; margin: 0 0 6px !important; }
+      .subtitle { font-size: 12px !important; }
+
+      .game-info { margin: 8px 0 10px !important; }
+      .game-info .details { display: grid !important; grid-template-columns: 2fr 1fr 0.9fr 0.9fr !important; gap: 8px !important; margin: 6px 0 10px !important; }
+      .game-info .details > div:first-child { grid-column: auto !important; }
+      .meta-input { min-height: 0 !important; font-size: 12px !important; padding: 5px 7px !important; }
+
+      .scoresheet-wrap { border: 1px solid var(--line) !important; overflow: visible !important; }
+      table { display: table !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; }
+      thead { display: table-header-group !important; }
+      th { background: var(--accent) !important; color: #fff !important; font-size: 11px !important; padding: 4px 2px !important; border: 1px solid var(--line) !important; }
+      th.player-heading { width: 116px !important; }
+      th.tenth-heading { width: 92px !important; }
+      th.total-heading { width: 52px !important; }
+      tbody { display: table-row-group !important; }
+
+      tr.bowler-row { display: table-row !important; background: #fff !important; border: 0 !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; gap: 0 !important; }
+      tr.bowler-row td { display: table-cell !important; border: 1px solid var(--line) !important; border-radius: 0 !important; padding: 0 !important; height: 62px !important; background: #fff !important; vertical-align: top !important; position: static !important; }
+      tr.bowler-row td::before { display: none !important; }
+      tr.bowler-row td.player-cell { padding: 4px !important; vertical-align: middle !important; }
+      .player-name { min-height: 0 !important; border: 0 !important; border-radius: 0 !important; padding: 2px !important; font-size: 13px !important; width: 100% !important; }
+
+      .frame { min-height: 60px !important; }
+      .throws { height: 24px !important; }
+      .roll { width: 24px !important; height: 24px !important; font-size: 13px !important; }
+      .frame:not(.tenth) .roll:first-child { width: 32px !important; }
+      .tenth .throws { width: 100% !important; }
+      .tenth .roll { width: auto !important; height: 24px !important; }
+      .score { font-size: 16px !important; min-height: 0 !important; padding-top: 2px !important; }
+      .grand-total { height: 62px !important; font-size: 18px !important; }
+
+      input, .roll, .score, .grand-total, th { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
   </style>
 </head>
 <body>
